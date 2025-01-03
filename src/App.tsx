@@ -12,7 +12,7 @@ function AppContent() {
 
   return (
     <Router>
-      <AuthProvider>
+      <AuthProvider> 
         <AppRoutes />
       </AuthProvider>
     </Router>
