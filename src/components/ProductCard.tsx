@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { Package, CheckCircle } from 'lucide-react';
+import { QuantityInput } from './ui/QuantityInput';
 
 interface ProductCardProps {
   product: Product;
@@ -48,17 +49,10 @@ export function ProductCard({
           <label className="block text-sm font-medium text-gray-700">
             Cantidad
           </label>
-          <input
-            type="number"
-            min="0"
+          <QuantityInput
             value={quantity}
-            onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 0)}
+            onChange={handleQuantityChange}
             className={`
-              block w-full px-4 py-3 
-              border-2 rounded-lg
-              text-lg font-medium text-center
-              focus:ring-2 focus:ring-offset-2 
-              transition-colors duration-200
               ${completed 
                 ? 'border-green-200 bg-green-50 focus:ring-green-500 focus:border-green-500' 
                 : 'border-gray-200 focus:ring-indigo-500 focus:border-indigo-500'
