@@ -6,13 +6,11 @@ import { useDateSelector } from './useDateSelector';
 interface DateSelectorProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
-  label?: string;
 }
 
 export default function DateSelector({ 
   selectedDate, 
-  onDateChange,
-  label = 'Fecha'
+  onDateChange
 }: DateSelectorProps) {
   const { 
     inputRef,
@@ -22,10 +20,7 @@ export default function DateSelector({
 
   return (
     <div className="w-full">
-      <DateHeader 
-        label={label} 
-        selectedDate={selectedDate} 
-      />
+      <DateHeader selectedDate={selectedDate} />
       <DateInput
         ref={inputRef}
         selectedDate={selectedDate}

@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Product } from '../types';
 import { ProductCard } from './ProductCard';
-import { LastSavedIndicator } from './LastSavedIndicator';
+import { SaveIndicator } from './ui/SaveIndicator';
+import { useAuth } from '../contexts/AuthContext';
+import { useProductionHistory } from '../hooks/useProductionHistory';
 
 interface ProductionListProps {
   products: Product[];
@@ -16,56 +18,52 @@ export function ProductionList({
   loading,
   initialProductions
 }: ProductionListProps) {
-  const [productions, setProductions] = useState<Record<string, { quantity: number; completed: boolean }>>(initialProductions);
-  const [lastSavedDate, setLastSavedDate] = useState<Date | null>(null);
+  const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    setProductions(initialProductions);
-  }, [initialProductions]);
+  const handleProductionChange = useCallback(async (
+    productId: string, 
+    quantity: number, 
+    completed: boolean
+  ) => {
+    if (loading) return;
 
-  const handleProductionChange = (productId: string, quantity: number, completed: boolean) => {
-    setProductions(prev => ({
-      ...prev,
+    const updatedProductions = {
+      ...initialProductions,
       [productId]: { quantity, completed }
-    }));
-  };
+    };
 
-  const handleSave = async () => {
     try {
-      await onSave(productions);
-      setLastSavedDate(new Date());
+      await onSave(updatedProductions);
+      setShowSaveIndicator(true);
+      setTimeout(() => setShowSaveIndicator(false), 2000);
     } catch (error) {
       console.error('Error saving production:', error);
     }
-  };
+  }, [loading, initialProductions, onSave]);
 
   return (
-    <div className="space-y-4">
+    <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map(product => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            initialQuantity={productions[product.id]?.quantity || 0}
-            initialCompleted={productions[product.id]?.completed || false}
-            onChange={(quantity, completed) => 
-              handleProductionChange(product.id, quantity, completed)
-            }
-          />
-        ))}
+        {products.map(product => {
+          const history = useProductionHistory(product.id, user?.uid || '');
+          
+          return (
+            <ProductCard
+              key={product.id}
+              product={product}
+              initialQuantity={initialProductions[product.id]?.quantity || 0}
+              initialCompleted={initialProductions[product.id]?.completed || false}
+              onChange={(quantity, completed) => 
+                handleProductionChange(product.id, quantity, completed)
+              }
+              disabled={loading}
+              productionHistory={history || undefined}
+            />
+          );
+        })}
       </div>
-      {products.length > 0 && (
-        <div className="space-y-2">
-          <LastSavedIndicator lastSavedDate={lastSavedDate} />
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? 'Guardando...' : 'Guardar Producción'}
-          </button>
-        </div>
-      )}
-    </div>
+      <SaveIndicator show={showSaveIndicator} />
+    </>
   );
 }

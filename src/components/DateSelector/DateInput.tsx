@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { formatInputDate, formatDisplayDate } from './dateUtils';
+import { formatInputDate } from './dateUtils';
 
 interface DateInputProps {
   selectedDate: Date;
@@ -32,20 +32,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             cursor-pointer
           "
         />
-        <DateBadge date={selectedDate} />
       </div>
     );
   }
 );
-
-function DateBadge({ date }: { date: Date }) {
-  return (
-    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-      <div className="px-3 py-1.5 rounded-full bg-indigo-50 group-hover:bg-indigo-100 transition-colors">
-        <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700">
-          {formatDisplayDate(date)}
-        </span>
-      </div>
-    </div>
-  );
-}
