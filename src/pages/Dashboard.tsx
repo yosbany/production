@@ -45,12 +45,20 @@ export default function Dashboard() {
           onFilterChange={setShowNonZero}
         />
         
-        <ProductionList
-          products={filteredProducts}
-          onSave={saveProduction}
-          loading={productionsLoading}
-          initialProductions={productions}
-        />
+        {filteredProducts.length > 0 ? (
+          <ProductionList
+            products={filteredProducts}
+            onSave={saveProduction}
+            loading={productionsLoading}
+            initialProductions={productions}
+          />
+        ) : (
+          <EmptyState message={
+            showNonZero 
+              ? "No hay productos con cantidad mayor a cero" 
+              : "No hay productos disponibles"
+          } />
+        )}
       </div>
     </div>
   );
