@@ -25,14 +25,19 @@ const DEFAULT_USERS = {
 
 export async function initializeDatabase() {
   try {
+    console.log('Initializing database...');
     const usersRef = ref(database, 'users');
     const snapshot = await get(usersRef);
 
     if (!snapshot.exists()) {
+      console.log('No users found, initializing with default data...');
       await set(usersRef, DEFAULT_USERS);
-      console.log('Database initialized with users');
+      console.log('Database initialized with default users');
+    } else {
+      console.log('Users already exist in database');
     }
   } catch (error) {
     console.error('Error initializing database:', error);
+    throw error;
   }
 }
