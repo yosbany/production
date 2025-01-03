@@ -7,7 +7,7 @@ interface ProductionHistory {
   lastQuantity: number | null;
 }
 
-export function useProductionHistory(productId: string, producerId: string) {
+export function useProductionHistory(productId: string, producerId: string): ProductionHistory | null {
   const [history, setHistory] = useState<ProductionHistory | null>(null);
 
   useEffect(() => {
@@ -15,12 +15,11 @@ export function useProductionHistory(productId: string, producerId: string) {
       if (!productId || !producerId) return;
 
       try {
-        // Use query to limit the number of records we fetch
         const productionsRef = ref(database, 'productions');
         const recentProductionsQuery = query(
           productionsRef,
           orderByKey(),
-          limitToLast(30) // Last 30 days
+          limitToLast(30)
         );
         
         const snapshot = await get(recentProductionsQuery);
@@ -31,7 +30,6 @@ export function useProductionHistory(productId: string, producerId: string) {
         let count = 0;
         let lastQuantity = null;
 
-        // Process productions in reverse chronological order
         Object.entries(productions)
           .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
           .some(([_, dateProductions]: [string, any]) => {
@@ -40,16 +38,14 @@ export function useProductionHistory(productId: string, producerId: string) {
 
             const production = producerProduction[productId];
             
-            // Add to average calculation
             if (production.quantity > 0) {
               totalQuantity += production.quantity;
               count++;
             }
 
-            // Set last completed quantity
             if (production.completed && lastQuantity === null) {
               lastQuantity = production.quantity;
-              return true; // Break the loop
+              return true;
             }
 
             return false;

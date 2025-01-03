@@ -42,26 +42,31 @@ export function ProductionList({
     }
   }, [loading, initialProductions, onSave]);
 
+  // Pre-fetch production history for all products
+  const productionHistories = products.reduce((acc, product) => {
+    if (user) {
+      const history = useProductionHistory(product.id, user.uid);
+      acc[product.id] = history;
+    }
+    return acc;
+  }, {} as Record<string, ReturnType<typeof useProductionHistory>>);
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map(product => {
-          const history = useProductionHistory(product.id, user?.uid || '');
-          
-          return (
-            <ProductCard
-              key={product.id}
-              product={product}
-              initialQuantity={initialProductions[product.id]?.quantity || 0}
-              initialCompleted={initialProductions[product.id]?.completed || false}
-              onChange={(quantity, completed) => 
-                handleProductionChange(product.id, quantity, completed)
-              }
-              disabled={loading}
-              productionHistory={history || undefined}
-            />
-          );
-        })}
+        {products.map(product => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            initialQuantity={initialProductions[product.id]?.quantity || 0}
+            initialCompleted={initialProductions[product.id]?.completed || false}
+            onChange={(quantity, completed) => 
+              handleProductionChange(product.id, quantity, completed)
+            }
+            disabled={loading}
+            productionHistory={productionHistories[product.id]}
+          />
+        ))}
       </div>
       <SaveIndicator show={showSaveIndicator} />
     </>

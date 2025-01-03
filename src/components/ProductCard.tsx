@@ -11,7 +11,7 @@ interface ProductCardProps {
   disabled?: boolean;
   productionHistory?: {
     averageQuantity: number;
-    lastQuantity: number;
+    lastQuantity: number | null;
   };
 }
 
@@ -28,23 +28,41 @@ export function ProductCard({
 
   useEffect(() => {
     setQuantity(initialQuantity);
-    setCompleted(initialCompleted);
-  }, [initialQuantity, initialCompleted]);
+    if (initialQuantity === 0 && completed) {
+      setCompleted(false);
+      onChange(0, false);
+    } else {
+      setCompleted(initialCompleted);
+    }
+  }, [initialQuantity, initialCompleted, onChange]);
 
   const handleQuantityChange = (value: number) => {
     setQuantity(value);
+    if (value === 0 && completed) {
+      setCompleted(false);
+      onChange(value, false);
+    } else {
+      onChange(value, completed);
+    }
   };
 
   const handleQuantitySave = (value: number) => {
-    onChange(value, completed);
+    if (value === 0 && completed) {
+      setCompleted(false);
+      onChange(value, false);
+    } else {
+      onChange(value, completed);
+    }
   };
 
   const handleCompletedChange = () => {
-    if (disabled) return;
+    if (disabled || quantity === 0) return;
     const newCompleted = !completed;
     setCompleted(newCompleted);
     onChange(quantity, newCompleted);
   };
+
+  const isCompletionDisabled = disabled || quantity === 0;
 
   return (
     <div className={`
@@ -74,7 +92,7 @@ export function ProductCard({
 
         <button
           onClick={handleCompletedChange}
-          disabled={disabled}
+          disabled={isCompletionDisabled}
           className={`
             w-full mt-4 flex items-center justify-center space-x-2 
             px-4 py-3 rounded-lg
@@ -82,13 +100,21 @@ export function ProductCard({
             transition-colors duration-200
             ${completed
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : quantity === 0
+                ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }
-            ${disabled ? 'cursor-not-allowed' : ''}
           `}
         >
           <CheckCircle className={`h-5 w-5 ${completed ? 'text-green-500' : 'text-gray-400'}`} />
-          <span>{completed ? 'Completado' : 'Marcar como completado'}</span>
+          <span className={quantity === 0 ? 'text-xs' : 'text-sm'}>
+            {completed 
+              ? 'Completado' 
+              : quantity === 0 
+                ? 'Cantidad debe ser mayor a 0'
+                : 'Marcar como completado'
+            }
+          </span>
         </button>
       </div>
     </div>

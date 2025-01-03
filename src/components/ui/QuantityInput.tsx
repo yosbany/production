@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAutoSave } from '../../hooks/useAutoSave';
+import { X } from 'lucide-react';
 
 interface ProductionStats {
   averageQuantity?: number;
@@ -12,7 +13,6 @@ interface QuantityInputProps {
   onSave: (value: number) => void;
   className?: string;
   disabled?: boolean;
-  min?: number;
   productionStats?: ProductionStats;
 }
 
@@ -22,7 +22,6 @@ export function QuantityInput({
   onSave,
   className = '',
   disabled = false,
-  min = 0,
   productionStats
 }: QuantityInputProps) {
   const [localValue, setLocalValue] = useState(value.toString());
@@ -53,22 +52,32 @@ export function QuantityInput({
   const handleBlur = () => {
     setIsFocused(false);
     clearAutoSaveTimeout();
-    const numValue = Number(localValue) || value;
-    onChange(numValue);
-    if (numValue !== previousValue) {
-      onSave(numValue);
+    const numValue = Number(localValue);
+    const finalValue = isNaN(numValue) ? previousValue : numValue;
+    onChange(finalValue);
+    if (finalValue !== previousValue) {
+      onSave(finalValue);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
-    const numValue = Number(newValue) || value;
-    onChange(numValue);
-    
-    if (isFocused) {
-      setupAutoSave(numValue);
+    const numValue = Number(newValue);
+    if (!isNaN(numValue)) {
+      onChange(numValue);
+      if (isFocused) {
+        setupAutoSave(numValue);
+      }
     }
+  };
+
+  const handleClear = () => {
+    if (disabled) return;
+    const newValue = 0;
+    setLocalValue(newValue.toString());
+    onChange(newValue);
+    onSave(newValue);
   };
 
   return (
@@ -99,7 +108,7 @@ export function QuantityInput({
         )}
         <input
           type="number"
-          min={min}
+          min="0"
           value={localValue}
           onChange={handleChange}
           onFocus={handleFocus}
@@ -116,6 +125,15 @@ export function QuantityInput({
             ${className}
           `}
         />
+        {Number(localValue) > 0 && !disabled && (
+          <button
+            onClick={handleClear}
+            className="absolute top-1/2 -translate-y-1/2 right-3 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            title="Poner en cero"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );

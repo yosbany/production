@@ -1,6 +1,5 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { NavLinks } from './NavLinks';
 import { UserInfo } from './UserInfo';
 
 interface MobileMenuProps {
@@ -11,34 +10,36 @@ interface MobileMenuProps {
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop with blur effect */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Off-canvas menu */}
       <div className={`
-        fixed inset-y-0 right-0 w-64 bg-white shadow-lg z-50 
-        transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 right-0 w-80 z-50 
+        bg-gradient-to-b from-white to-gray-50
+        transform transition-all duration-300 ease-out
         lg:hidden
-        ${isOpen ? 'translate-x-0' : 'translate-x-full'}
+        ${isOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'}
       `}>
-        <div className="p-4">
-          <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full text-gray-400 hover:bg-gray-100"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 px-6 py-4 bg-white/80 backdrop-blur-sm border-b">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full text-gray-500 hover:bg-gray-100/80 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <div className="mt-4">
-            <UserInfo className="border-b border-gray-200 pb-4 mb-4" />
-            <NavLinks orientation="vertical" />
+        {/* Content */}
+        <div className="h-full pt-20 px-6 pb-6">
+          <div className="bg-white rounded-2xl shadow-sm border p-4">
+            <UserInfo className="w-full" />
           </div>
         </div>
       </div>
