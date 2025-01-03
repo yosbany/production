@@ -3,6 +3,7 @@ import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { auth, database } from '../lib/firebase';
+import { initializeDatabase } from '../lib/firebase/initData';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         try {
+          // Initialize database after successful authentication
+          await initializeDatabase();
+          
           const userRef = ref(database, `users/${user.uid}`);
           const snapshot = await get(userRef);
           
@@ -32,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = snapshot.val();
             setUserRole(userData.role);
             
-            // Redirigir basado en el rol
+            // Redirect based on role
             if (userData.role === 'admin') {
               navigate('/admin');
             } else if (userData.role === 'producer') {
@@ -71,7 +75,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Show loading state while authentication is being checked
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
