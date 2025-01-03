@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAutoSave } from '../../hooks/useAutoSave';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useProductionAutoSave } from '../../hooks/useProductionAutoSave';
 import { X } from 'lucide-react';
 
 interface ProductionStats {
@@ -27,19 +27,25 @@ export function QuantityInput({
   const [localValue, setLocalValue] = useState(value.toString());
   const [previousValue, setPreviousValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
+  const [pendingValue, setPendingValue] = useState<number | null>(null);
 
-  const { setupAutoSave, clearAutoSaveTimeout } = useAutoSave({
-    onSave: (value: number) => {
-      if (!disabled && value !== previousValue) {
-        onSave(value);
-      }
+  const handleSave = useCallback(() => {
+    if (pendingValue !== null && pendingValue !== previousValue) {
+      onSave(pendingValue);
+      setPreviousValue(pendingValue);
+      setPendingValue(null);
     }
+  }, [pendingValue, previousValue, onSave]);
+
+  const { setupAutoSave, clearAutoSaveTimeout } = useProductionAutoSave({
+    onSave: handleSave
   });
 
   useEffect(() => {
     if (!isFocused) {
       setLocalValue(value.toString());
       setPreviousValue(value);
+      setPendingValue(null);
     }
   }, [value, isFocused]);
 
@@ -47,6 +53,7 @@ export function QuantityInput({
     if (disabled) return;
     setIsFocused(true);
     setLocalValue('');
+    clearAutoSaveTimeout();
   };
 
   const handleBlur = () => {
@@ -54,30 +61,37 @@ export function QuantityInput({
     clearAutoSaveTimeout();
     const numValue = Number(localValue);
     const finalValue = isNaN(numValue) ? previousValue : numValue;
+    
     onChange(finalValue);
+    
     if (finalValue !== previousValue) {
       onSave(finalValue);
+      setPreviousValue(finalValue);
+      setPendingValue(null);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
+    
     const numValue = Number(newValue);
     if (!isNaN(numValue)) {
       onChange(numValue);
-      if (isFocused) {
-        setupAutoSave(numValue);
-      }
+      setPendingValue(numValue);
+      setupAutoSave();
     }
   };
 
   const handleClear = () => {
     if (disabled) return;
+    clearAutoSaveTimeout();
     const newValue = 0;
     setLocalValue(newValue.toString());
     onChange(newValue);
     onSave(newValue);
+    setPreviousValue(newValue);
+    setPendingValue(null);
   };
 
   return (

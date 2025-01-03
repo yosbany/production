@@ -38,12 +38,7 @@ export function ProductCard({
 
   const handleQuantityChange = (value: number) => {
     setQuantity(value);
-    if (value === 0 && completed) {
-      setCompleted(false);
-      onChange(value, false);
-    } else {
-      onChange(value, completed);
-    }
+    // Don't trigger onChange immediately - let QuantityInput handle the auto-save
   };
 
   const handleQuantitySave = (value: number) => {
@@ -59,7 +54,7 @@ export function ProductCard({
     if (disabled || quantity === 0) return;
     const newCompleted = !completed;
     setCompleted(newCompleted);
-    onChange(quantity, newCompleted);
+    onChange(quantity, newCompleted); // Save immediately when completion status changes
   };
 
   const isCompletionDisabled = disabled || quantity === 0;
