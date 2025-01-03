@@ -2,10 +2,11 @@
   "name": "production",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://yosbany.github.io/production",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode production",
+    "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
