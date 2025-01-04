@@ -2,6 +2,7 @@ import React from 'react';
 import { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { SaveIndicator } from './ui/SaveIndicator';
+import { EmptyState } from './ui/EmptyState';
 import { useProductionListLogic } from '../hooks/useProductionListLogic';
 
 interface ProductionListProps {
