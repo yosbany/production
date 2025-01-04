@@ -4,6 +4,7 @@ import { ProductionList } from '../components/ProductionList';
 import { ProductionFilter } from '../components/ProductionFilter';
 import { useProduction } from '../hooks/useProduction';
 import { useProducerProducts } from '../hooks/useProducerProducts';
+import { useProductSelection } from '../hooks/useProductSelection';
 import { LoadingState } from '../components/ui/LoadingState';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -12,15 +13,17 @@ export default function Dashboard() {
   const [showNonZero, setShowNonZero] = useState(false);
   const { productions, saveProduction, loading: productionsLoading } = useProduction(selectedDate);
   const { products: assignedProducts, loading: productsLoading } = useProducerProducts();
+  const { selectedProducts, toggleProductSelection, isSelected } = useProductSelection();
 
   const loading = productionsLoading || productsLoading;
 
-  const filteredProducts = showNonZero 
-    ? assignedProducts.filter(product => {
-        const production = productions[product.id];
-        return production && production.quantity > 0;
-      })
-    : assignedProducts;
+  const filteredProducts = assignedProducts.filter(product => {
+    if (showNonZero) {
+      const production = productions[product.id];
+      return selectedProducts.has(product.id) && (!production || production.quantity > 0);
+    }
+    return selectedProducts.has(product.id);
+  });
 
   if (loading) {
     return <LoadingState message="Cargando datos..." />;
@@ -45,20 +48,16 @@ export default function Dashboard() {
           onFilterChange={setShowNonZero}
         />
         
-        {filteredProducts.length > 0 ? (
-          <ProductionList
-            products={filteredProducts}
-            onSave={saveProduction}
-            loading={productionsLoading}
-            initialProductions={productions}
-          />
-        ) : (
-          <EmptyState message={
-            showNonZero 
-              ? "No hay productos con cantidad mayor a cero" 
-              : "No hay productos disponibles"
-          } />
-        )}
+        <ProductionList
+          products={assignedProducts}
+          onSave={saveProduction}
+          loading={productionsLoading}
+          initialProductions={productions}
+          selectedProducts={selectedProducts}
+          onToggleProductSelection={toggleProductSelection}
+          isProductSelected={isSelected}
+          showSelected={showNonZero}
+        />
       </div>
     </div>
   );

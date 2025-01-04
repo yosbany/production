@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
-import { Package, CheckCircle } from 'lucide-react';
+import { Package, CheckCircle, Star } from 'lucide-react';
 import { QuantityInput } from './ui/QuantityInput';
 
 interface ProductCardProps {
@@ -13,6 +13,8 @@ interface ProductCardProps {
     averageQuantity: number;
     lastQuantity: number | null;
   };
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export function ProductCard({ 
@@ -21,7 +23,9 @@ export function ProductCard({
   initialCompleted = false,
   onChange,
   disabled = false,
-  productionHistory
+  productionHistory,
+  isSelected = false,
+  onToggleSelect
 }: ProductCardProps) {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [completed, setCompleted] = useState(initialCompleted);
@@ -38,7 +42,6 @@ export function ProductCard({
 
   const handleQuantityChange = (value: number) => {
     setQuantity(value);
-    // Don't trigger onChange immediately - let QuantityInput handle the auto-save
   };
 
   const handleQuantitySave = (value: number) => {
@@ -54,7 +57,7 @@ export function ProductCard({
     if (disabled || quantity === 0) return;
     const newCompleted = !completed;
     setCompleted(newCompleted);
-    onChange(quantity, newCompleted); // Save immediately when completion status changes
+    onChange(quantity, newCompleted);
   };
 
   const isCompletionDisabled = disabled || quantity === 0;
@@ -63,12 +66,28 @@ export function ProductCard({
     <div className={`
       rounded-lg shadow-md transition-all duration-200
       ${completed ? 'bg-green-50 border-2 border-green-200' : 'bg-white'}
+      ${isSelected ? 'ring-2 ring-indigo-500' : ''}
       ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
     `}>
       <div className="p-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <Package className={`h-5 w-5 ${completed ? 'text-green-500' : 'text-gray-400'}`} />
-          <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Package className={`h-5 w-5 ${completed ? 'text-green-500' : 'text-gray-400'}`} />
+            <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+          </div>
+          {onToggleSelect && (
+            <button
+              onClick={onToggleSelect}
+              className={`p-2 rounded-full transition-colors ${
+                isSelected 
+                  ? 'text-indigo-600 hover:bg-indigo-50' 
+                  : 'text-gray-400 hover:bg-gray-50'
+              }`}
+              title={isSelected ? 'Deseleccionar producto' : 'Seleccionar para elaborar'}
+            >
+              <Star className={`h-5 w-5 ${isSelected ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         <QuantityInput
@@ -106,7 +125,7 @@ export function ProductCard({
             {completed 
               ? 'Completado' 
               : quantity === 0 
-                ? 'Cantidad debe ser mayor a 0'
+                ? 'Cantidad debe ser mayor a cero'
                 : 'Marcar como completado'
             }
           </span>
