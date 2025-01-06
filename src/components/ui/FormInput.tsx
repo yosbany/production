@@ -13,7 +13,7 @@ export function FormInput({
   type = 'text',
   options,
   className = '',
-  value,
+  value = '', // Provide default value to prevent uncontrolled/controlled switch
   onChange,
   ...props 
 }: FormInputProps) {
@@ -35,7 +35,6 @@ export function FormInput({
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (type === 'number' && e.target.value === '0') {
       e.target.value = '';
-      // Trigger onChange to update the form state
       onChange?.(e as any);
     }
   };
@@ -46,7 +45,12 @@ export function FormInput({
         {label}
       </label>
       {type === 'select' && options ? (
-        <select className={inputClasses} value={value} onChange={onChange as any} {...props}>
+        <select 
+          className={inputClasses} 
+          value={value} 
+          onChange={onChange as any} 
+          {...props}
+        >
           {options.map(({ value, label }) => (
             <option key={value} value={value}>{label}</option>
           ))}

@@ -16,16 +16,19 @@ export default function ProductManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateProduct = async (productData: Omit<Product, 'id'>) => {
     setLoading(true);
+    setError(null);
     try {
       await createProduct(productData);
+      setIsModalOpen(false);
     } catch (error) {
+      setError('Error al crear el producto');
       console.error('Error creating product:', error);
     } finally {
       setLoading(false);
-      setIsModalOpen(false);
     }
   };
 
@@ -33,14 +36,16 @@ export default function ProductManagement() {
     if (!editingProduct) return;
     
     setLoading(true);
+    setError(null);
     try {
       await updateProduct(editingProduct.id, productData);
+      setIsModalOpen(false);
     } catch (error) {
+      setError('Error al actualizar el producto');
       console.error('Error updating product:', error);
     } finally {
       setLoading(false);
       setEditingProduct(null);
-      setIsModalOpen(false);
     }
   };
 
@@ -53,14 +58,16 @@ export default function ProductManagement() {
     if (!deletingProduct) return;
     
     setLoading(true);
+    setError(null);
     try {
       await deleteProduct(deletingProduct.id);
+      setIsDeleteModalOpen(false);
     } catch (error) {
+      setError('Error al eliminar el producto');
       console.error('Error deleting product:', error);
     } finally {
       setLoading(false);
       setDeletingProduct(null);
-      setIsDeleteModalOpen(false);
     }
   };
 
@@ -77,10 +84,15 @@ export default function ProductManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
+    setError(null);
   };
 
   if (productsLoading || producersLoading) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center h-48">
+        <div className="text-gray-500">Cargando...</div>
+      </div>
+    );
   }
 
   return (
@@ -96,6 +108,12 @@ export default function ProductManagement() {
         </button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      )}
+
       <ProductList
         products={products}
         producers={producers}
@@ -107,7 +125,7 @@ export default function ProductManagement() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={editingProduct ? handleUpdateProduct : handleCreateProduct}
-        initialData={editingProduct || undefined}
+        initialData={editingProduct}
         loading={loading}
         producers={producers}
       />

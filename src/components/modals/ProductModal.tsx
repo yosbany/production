@@ -1,8 +1,10 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, TrendingUp, DollarSign } from 'lucide-react';
 import { Product } from '../../types/product';
 import { Producer } from '../../types/producer';
 import { FormInput } from '../ui/FormInput';
+import { formatCurrency, formatPercentage } from '../../utils/format';
+import { CostManagementModal } from '../costs/CostManagementModal';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -15,10 +17,10 @@ interface ProductModalProps {
 
 const defaultFormData: Omit<Product, 'id'> = {
   name: '',
-  unitsPerRecipe: 0,
   fixedCost: 0,
   salePrice: 0,
-  producerId: ''
+  producerId: '',
+  procedure: ''
 };
 
 export function ProductModal({ 
@@ -29,37 +31,39 @@ export function ProductModal({
   loading,
   producers
 }: ProductModalProps) {
-  const [formData, setFormData] = React.useState<Omit<Product, 'id'>>(defaultFormData);
+  const [formData, setFormData] = useState<Omit<Product, 'id'>>(defaultFormData);
+  const [showCostModal, setShowCostModal] = useState(false);
 
-  React.useEffect(() => {
-    // Reset form when modal opens/closes
-    if (isOpen) {
-      if (initialData) {
-        setFormData({
-          name: initialData.name,
-          unitsPerRecipe: initialData.unitsPerRecipe,
-          fixedCost: initialData.fixedCost,
-          salePrice: initialData.salePrice,
-          producerId: initialData.producerId
-        });
-      } else {
-        setFormData(defaultFormData);
-      }
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name,
+        fixedCost: initialData.fixedCost,
+        salePrice: initialData.salePrice,
+        producerId: initialData.producerId,
+        procedure: initialData.procedure || ''
+      });
+    } else {
+      setFormData(defaultFormData);
     }
-  }, [isOpen, initialData]);
+  }, [initialData, isOpen]);
+
+  const calculateGrossMargin = (): number => {
+    if (formData.salePrice === 0) return 0;
+    return ((formData.salePrice - formData.fixedCost) / formData.salePrice) * 100;
+  };
+
+  const handleCostsUpdated = (totalCost: number) => {
+    setFormData(prev => ({ ...prev, fixedCost: totalCost }));
+  };
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(formData);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-40 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black opacity-30" onClick={onClose}></div>
-        <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="fixed inset-0 bg-black opacity-30" onClick={onClose} />
+        <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="text-lg font-medium">
               {initialData ? 'Editar Producto' : 'Nuevo Producto'}
@@ -69,7 +73,7 @@ export function ProductModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="p-4 space-y-4">
             <FormInput
               label="Nombre del Producto"
               value={formData.name}
@@ -77,34 +81,74 @@ export function ProductModal({
               required
             />
 
-            <FormInput
-              label="Unidades por Receta"
-              type="number"
-              value={formData.unitsPerRecipe}
-              onChange={(e) => setFormData(prev => ({ ...prev, unitsPerRecipe: Number(e.target.value) }))}
-              required
-              min="1"
-            />
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Procedimiento de Elaboración
+              </label>
+              <textarea
+                value={formData.procedure}
+                onChange={(e) => setFormData(prev => ({ ...prev, procedure: e.target.value }))}
+                rows={4}
+                className="
+                  w-full px-3 py-2 
+                  border-2 border-gray-300 
+                  rounded-md shadow-sm 
+                  bg-white
+                  text-gray-900
+                  placeholder-gray-400
+                  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                  hover:border-gray-400
+                  transition-colors
+                "
+                placeholder="Describa el procedimiento de elaboración del producto..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Costos
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCostModal(true)}
+                className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border rounded-md hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-5 w-5 text-gray-500" />
+                  <span className="text-gray-900 font-medium">
+                    {formatCurrency(formData.fixedCost)}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  Gestionar costos
+                </span>
+              </button>
+            </div>
 
             <FormInput
-              label="Costo Fijo (UYU)"
-              type="number"
-              value={formData.fixedCost}
-              onChange={(e) => setFormData(prev => ({ ...prev, fixedCost: Number(e.target.value) }))}
-              required
-              min="0"
-              step="0.01"
-            />
-
-            <FormInput
-              label="Precio de Venta (UYU)"
+              label="Precio de Venta"
               type="number"
               value={formData.salePrice}
-              onChange={(e) => setFormData(prev => ({ ...prev, salePrice: Number(e.target.value) }))}
-              required
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                salePrice: Number(e.target.value) 
+              }))}
               min="0"
               step="0.01"
+              required
             />
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Margen Bruto</span>
+                </div>
+                <span className={`text-sm font-bold ${calculateGrossMargin() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPercentage(calculateGrossMargin())}
+                </span>
+              </div>
+            </div>
 
             <FormInput
               label="Productor Asignado"
@@ -138,6 +182,17 @@ export function ProductModal({
               </button>
             </div>
           </form>
+
+          {showCostModal && (
+            <CostManagementModal
+              isOpen={true}
+              onClose={() => setShowCostModal(false)}
+              productId={initialData?.id || ''}
+              productName={formData.name}
+              salePrice={formData.salePrice}
+              onCostsUpdated={handleCostsUpdated}
+            />
+          )}
         </div>
       </div>
     </div>

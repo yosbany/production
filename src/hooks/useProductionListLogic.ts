@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Product } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useProductionHistory } from './useProductionHistory';
@@ -18,13 +18,6 @@ export function useProductionListLogic({
 }: UseProductionListLogicProps) {
   const [showSaveIndicator, setShowSaveIndicator] = useState(false);
   const { user } = useAuth();
-
-  const productionHistories = products.reduce((acc, product) => {
-    if (!user) return acc;
-    const history = useProductionHistory(product.id, user.uid);
-    acc[product.id] = history;
-    return acc;
-  }, {} as Record<string, ReturnType<typeof useProductionHistory>>);
 
   const handleProductionChange = useCallback(async (
     productId: string, 
@@ -46,6 +39,18 @@ export function useProductionListLogic({
       console.error('Error saving production:', error);
     }
   }, [loading, initialProductions, onSave, user]);
+
+  // Use useMemo for production histories to maintain referential equality
+  const productionHistories = useMemo(() => {
+    if (!user) return {};
+    return products.reduce((acc, product) => {
+      const history = useProductionHistory(product.id, user.uid);
+      if (history) {
+        acc[product.id] = history;
+      }
+      return acc;
+    }, {} as Record<string, ReturnType<typeof useProductionHistory>>);
+  }, [products, user]);
 
   return {
     showSaveIndicator,

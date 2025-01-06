@@ -3,7 +3,6 @@ import { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { SaveIndicator } from './ui/SaveIndicator';
 import { EmptyState } from './ui/EmptyState';
-import { useProductionListLogic } from '../hooks/useProductionListLogic';
 
 interface ProductionListProps {
   products: Product[];
@@ -17,8 +16,8 @@ interface ProductionListProps {
 }
 
 export function ProductionList({ 
-  products, 
-  onSave, 
+  products,
+  onSave,
   loading,
   initialProductions,
   selectedProducts,
@@ -26,25 +25,25 @@ export function ProductionList({
   isProductSelected,
   showSelected
 }: ProductionListProps) {
-  const {
-    showSaveIndicator,
-    productionHistories,
-    handleProductionChange,
-    user
-  } = useProductionListLogic({
-    products,
-    onSave,
-    loading,
-    initialProductions
-  });
-
-  if (!user) {
-    return null;
-  }
-
   const displayProducts = showSelected 
     ? products.filter(p => selectedProducts.has(p.id))
     : products;
+
+  const handleProductionChange = async (
+    productId: string, 
+    quantity: number, 
+    completed: boolean
+  ) => {
+    const updatedProductions = {
+      ...initialProductions,
+      [productId]: { 
+        quantity, 
+        completed,
+        selected: isProductSelected(productId)
+      }
+    };
+    await onSave(updatedProductions);
+  };
 
   return (
     <>
@@ -55,11 +54,8 @@ export function ProductionList({
             product={product}
             initialQuantity={initialProductions[product.id]?.quantity || 0}
             initialCompleted={initialProductions[product.id]?.completed || false}
-            onChange={(quantity, completed) => 
-              handleProductionChange(product.id, quantity, completed)
-            }
+            onChange={(quantity, completed) => handleProductionChange(product.id, quantity, completed)}
             disabled={loading}
-            productionHistory={productionHistories[product.id]}
             isSelected={isProductSelected(product.id)}
             onToggleSelect={() => onToggleProductSelection(product.id)}
           />
@@ -73,7 +69,7 @@ export function ProductionList({
           } 
         />
       )}
-      <SaveIndicator show={showSaveIndicator} />
+      <SaveIndicator show={loading} />
     </>
   );
 }

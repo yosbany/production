@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         try {
-          // Initialize database after successful authentication
           await initializeDatabase();
           
           const userRef = ref(database, `users/${user.uid}`);
@@ -41,17 +40,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               navigate('/admin');
             } else if (userData.role === 'producer') {
               navigate('/dashboard');
-            } else {
-              navigate('/unauthorized');
             }
           } else {
             setUserRole(null);
-            navigate('/unauthorized');
           }
         } catch (error) {
           console.error('Error fetching user role:', error);
           setUserRole(null);
-          navigate('/unauthorized');
         }
       } else {
         setUserRole(null);

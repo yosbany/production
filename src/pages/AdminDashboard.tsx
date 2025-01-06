@@ -1,6 +1,7 @@
 import React from 'react';
 import ProductManagement from './admin/ProductManagement';
 import ProductionManagement from './admin/ProductionManagement';
+import CostManagement from './admin/CostManagement';
 import { Tabs } from '../components/ui/Tabs';
 
 export default function AdminDashboard() {
@@ -9,6 +10,7 @@ export default function AdminDashboard() {
   const tabs = [
     { id: 'productions', label: 'Producciones' },
     { id: 'products', label: 'Gestión de Productos' },
+    { id: 'costs', label: 'Gestión de Costos' }
   ];
 
   return (
@@ -22,11 +24,9 @@ export default function AdminDashboard() {
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       
       <div className="mt-6">
-        {activeTab === 'productions' ? (
-          <ProductionManagement />
-        ) : (
-          <ProductManagement />
-        )}
+        {activeTab === 'productions' && <ProductionManagement />}
+        {activeTab === 'products' && <ProductManagement />}
+        {activeTab === 'costs' && <CostManagement />}
       </div>
     </div>
   );

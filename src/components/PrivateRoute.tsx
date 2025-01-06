@@ -14,13 +14,8 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
     return <Navigate to="/login" />;
   }
 
-  // If user is logged in but has no role, redirect to unauthorized
-  if (!userRole) {
-    return <Navigate to="/unauthorized" />;
-  }
-  
   // Check if user's role is allowed
-  if (!allowedRoles.includes(userRole)) {
+  if (!allowedRoles.includes(userRole || '')) {
     // Redirect admin to admin dashboard and producers to their dashboard
     return <Navigate to={userRole === 'admin' ? '/admin' : '/dashboard'} />;
   }

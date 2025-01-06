@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Menu } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { NavLinks } from './navigation/NavLinks';
 import { UserInfo } from './navigation/UserInfo';
-import { MobileMenu } from './navigation/MobileMenu';
 
 export default function Navbar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <nav className="bg-indigo-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,8 +12,10 @@ export default function Navbar() {
           {/* Logo and brand */}
           <div className="flex-1 flex items-center">
             <Link to="/" className="flex items-center">
-              <FileText className="h-6 w-6 text-white mr-3" />
-              <h1 className="text-xl font-bold text-white">Centro de Producción</h1>
+              <FileText className="h-6 w-6 text-white mr-2 sm:mr-3 shrink-0" />
+              <h1 className="text-base sm:text-lg md:text-xl font-bold text-white truncate">
+                Centro de Producción
+              </h1>
             </Link>
           </div>
 
@@ -26,21 +25,12 @@ export default function Navbar() {
             <UserInfo />
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-full text-white hover:bg-indigo-500"
-          >
-            <Menu className="h-6 w-6" />
-          </button>
+          {/* Mobile user info */}
+          <div className="lg:hidden">
+            <UserInfo compact />
+          </div>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      <MobileMenu 
-        isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)} 
-      />
     </nav>
   );
 }

@@ -1,3 +1,9 @@
+export interface Production {
+  quantity: number;
+  completed: boolean;
+  selected?: boolean;
+}
+
 export interface ProductionListItem {
   id: string;
   date: string;
@@ -10,25 +16,5 @@ export interface ProductionListItem {
   status: 'completed' | 'in-progress';
   completionPercentage: number;
   performance: number;
-  productions: Record<string, {
-    quantity: number;
-    completed: boolean;
-  }>;
-}
-
-export interface ProductionCost {
-  id: string;
-  date: string;
-  producerId: string;
-  producerName: string;
-  totalCost: number;
-  salaryCost: number;
-  efficiency: number;
-  products: {
-    [productId: string]: {
-      quantity: number;
-      completed: boolean;
-      cost: number;
-    }
-  }
+  productions: Record<string, Production>;
 }
