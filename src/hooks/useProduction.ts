@@ -8,36 +8,52 @@ import { saveProductionData } from '../utils/production/database';
 export function useProduction(date: Date) {
   const [productions, setProductions] = useState<Record<string, Production>>({});
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { producerId } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    if (!producerId) return;
 
     const dateString = date.toISOString().split('T')[0];
-    const productionRef = ref(database, `productions/${dateString}/${user.uid}`);
+    const productionRef = ref(database, `productions/${dateString}/${producerId}`);
     
     const unsubscribe = onValue(productionRef, (snapshot) => {
-      setProductions(snapshot.exists() ? snapshot.val() : {});
+      if (snapshot.exists()) {
+        // Convertir los datos a nuestro formato de producción
+        const productionData = snapshot.val();
+        const formattedProductions: Record<string, Production> = {};
+        
+        // Procesar cada producto en la producción
+        Object.entries(productionData).forEach(([productId, data]: [string, any]) => {
+          formattedProductions[productId] = {
+            quantity: data.quantity || 0,
+            completed: data.completed || false,
+            selected: data.selected || false
+          };
+        });
+        
+        setProductions(formattedProductions);
+      } else {
+        setProductions({});
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, date]);
+  }, [producerId, date]);
 
   const saveProduction = useCallback(async (newProductions: Record<string, Production>) => {
-    if (!user) return;
+    if (!producerId) return;
     
     setLoading(true);
     try {
-      await saveProductionData(date, user.uid, newProductions);
-      // No need to manually update state as onValue listener will handle it
+      await saveProductionData(date, producerId, newProductions);
     } catch (error) {
       console.error('Error saving production:', error);
       throw error;
     } finally {
       setLoading(false);
     }
-  }, [user, date]);
+  }, [producerId, date]);
 
   return { 
     productions,

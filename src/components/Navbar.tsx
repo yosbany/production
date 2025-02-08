@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText } from 'lucide-react';
-import { NavLinks } from './navigation/NavLinks';
 import { UserInfo } from './navigation/UserInfo';
 
 export default function Navbar() {
@@ -19,15 +18,9 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Desktop navigation */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-6">
-            <NavLinks />
+          {/* User info */}
+          <div>
             <UserInfo />
-          </div>
-
-          {/* Mobile user info */}
-          <div className="lg:hidden">
-            <UserInfo compact />
           </div>
         </div>
       </div>

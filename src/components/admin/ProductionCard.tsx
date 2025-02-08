@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ProductionListItem } from '../../types/production';
 import { formatDate, formatCurrency } from '../../utils/format';
-import { TrendingUp, DollarSign, Percent, ChevronRight, ShoppingCart, PiggyBank, Edit } from 'lucide-react';
+import { ChevronRight, ShoppingCart, PiggyBank, Edit, AlertTriangle, TrendingUp } from 'lucide-react';
 import { ProductionDetailsModal } from '../modals/ProductionDetailsModal';
 import { EditProductionModal } from '../modals/EditProductionModal';
 import { useProductionDetails } from '../../hooks/useProductionDetails';
@@ -16,10 +16,36 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const { products, loading } = useProductionDetails(production.date, production.producerId);
 
-  const getPerformanceColor = (performance: number) => {
-    if (performance >= 50) return 'text-green-500';
-    if (performance >= 25) return 'text-yellow-500';
+  const getLaborCostColor = (percentage: number) => {
+    if (percentage <= 20) return 'text-green-500';
+    if (percentage <= 30) return 'text-yellow-500';
     return 'text-red-500';
+  };
+
+  const getLaborCostTooltip = (percentage: number) => {
+    if (percentage <= 20) {
+      return 'Excelente: El costo laboral está por debajo del 20% de las ventas netas';
+    }
+    if (percentage <= 30) {
+      return 'Aceptable: El costo laboral está entre 20% y 30% de las ventas netas';
+    }
+    return 'Alto: El costo laboral supera el 30% de las ventas netas - Requiere atención';
+  };
+
+  const getSalesRatioColor = (ratio: number) => {
+    if (ratio >= 5) return 'text-green-500';
+    if (ratio >= 3) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getSalesRatioTooltip = (ratio: number) => {
+    if (ratio >= 5) {
+      return 'Excelente: Las ventas son 5 o más veces el salario';
+    }
+    if (ratio >= 3) {
+      return 'Aceptable: Las ventas son entre 3 y 5 veces el salario';
+    }
+    return 'Bajo: Las ventas son menos de 3 veces el salario - Requiere atención';
   };
 
   const getProgressColor = (percentage: number) => {
@@ -33,10 +59,16 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
     setIsEditModalOpen(true);
   };
 
+  // Calcular ratio de ventas por salario
+  const salesRatio = production.salaryCost > 0 
+    ? Number((production.totalSales / production.salaryCost).toFixed(2))
+    : 0;
+
   return (
     <>
       <div className="p-6 bg-white rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
         <div className="space-y-4">
+          {/* Header */}
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
@@ -82,42 +114,17 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {/* Costo */}
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-red-50 rounded-lg">
-                <DollarSign className="h-5 w-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Costo</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {formatCurrency(production.totalCost)}
-                </p>
-              </div>
-            </div>
-
-            {/* Venta */}
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Venta Neta */}
             <div className="flex items-center space-x-2">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <ShoppingCart className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Venta</p>
+                <p className="text-sm text-gray-500">Venta Neta</p>
                 <p className="text-sm font-semibold text-gray-900">
                   {formatCurrency(production.totalSales)}
-                </p>
-              </div>
-            </div>
-
-            {/* Margen */}
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Margen</p>
-                <p className="text-sm font-semibold text-gray-900">
-                  {formatCurrency(production.netIncome)}
                 </p>
               </div>
             </div>
@@ -135,16 +142,49 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
               </div>
             </div>
 
-            {/* Rendimiento */}
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-yellow-50 rounded-lg">
-                <Percent className="h-5 w-5 text-yellow-500" />
+            {/* Costo Laboral */}
+            <div className="group relative">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-yellow-50 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Costo Laboral</p>
+                  <p className={`text-sm font-semibold ${getLaborCostColor(production.laborCostPercentage)}`}>
+                    {production.laborCostPercentage}%
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Rendimiento</p>
-                <p className={`text-sm font-semibold ${getPerformanceColor(production.performance)}`}>
-                  {production.performance}%
-                </p>
+              
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="text-center">
+                  {getLaborCostTooltip(production.laborCostPercentage)}
+                </div>
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              </div>
+            </div>
+
+            {/* Ratio Ventas/Salario */}
+            <div className="group relative">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Ratio V/S</p>
+                  <p className={`text-sm font-semibold ${getSalesRatioColor(salesRatio)}`}>
+                    {salesRatio}x
+                  </p>
+                </div>
+              </div>
+              
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="text-center">
+                  {getSalesRatioTooltip(salesRatio)}
+                </div>
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 transform rotate-45"></div>
               </div>
             </div>
           </div>
@@ -157,8 +197,9 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
         producerName={production.producerName}
         products={products}
         salaryCost={production.salaryCost}
-        netIncome={production.netIncome}
-        performance={production.performance}
+        laborCostPercentage={production.laborCostPercentage}
+        wastePercentage={production.wastePercentage}
+        salesRatio={salesRatio}
       />
 
       <EditProductionModal

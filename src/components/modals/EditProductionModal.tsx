@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { ProductionListItem } from '../../types/production';
 import { ProductDetails } from '../../types/productDetails';
@@ -24,15 +24,31 @@ export function EditProductionModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productions, setProductions] = useState<Record<string, { quantity: number; completed: boolean }>>(
-    production.productions || {}
+    {}
   );
+
+  // Inicializar/actualizar producciones cuando el modal se abre o cambian los productos
+  useEffect(() => {
+    if (isOpen) {
+      const initialProductions = { ...production.productions };
+      
+      // Asegurarse de que todos los productos tengan una entrada
+      products.forEach(product => {
+        if (!initialProductions[product.id]) {
+          initialProductions[product.id] = { quantity: 0, completed: false };
+        }
+      });
+
+      setProductions(initialProductions);
+    }
+  }, [isOpen, products, production.productions]);
 
   const handleProductionChange = (productId: string, quantity: number, completed: boolean) => {
     setProductions(prev => ({
       ...prev,
       [productId]: { quantity, completed }
     }));
-    setError(null); // Clear any previous errors
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +57,19 @@ export function EditProductionModal({
     setError(null);
 
     try {
-      const updatedProduction = updateProductionData(production, products, productions);
+      // Filtrar productos con cantidad 0
+      const validProductions = Object.entries(productions)
+        .filter(([_, prod]) => prod.quantity > 0)
+        .reduce((acc, [id, prod]) => ({
+          ...acc,
+          [id]: prod
+        }), {});
+
+      if (Object.keys(validProductions).length === 0) {
+        throw new Error('Debe especificar al menos una cantidad mayor a cero');
+      }
+
+      const updatedProduction = updateProductionData(production, products, validProductions);
       await onSave(updatedProduction);
       onClose();
     } catch (error) {

@@ -3,12 +3,14 @@ import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { ref, get } from 'firebase/database';
 import { auth, database } from '../lib/firebase';
-import { initializeDatabase } from '../lib/firebase/initData';
+import { ACCESS_CONFIG } from '../constants/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   userRole: string | null;
+  producerId: string | null;
+  error: string | null;
   logout: () => Promise<void>;
 }
 
@@ -18,38 +20,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [producerId, setProducerId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      setLoading(true);
       
       if (user) {
         try {
-          await initializeDatabase();
-          
-          const userRef = ref(database, `users/${user.uid}`);
-          const snapshot = await get(userRef);
-          
-          if (snapshot.exists()) {
-            const userData = snapshot.val();
-            setUserRole(userData.role);
-            
-            // Redirect based on role
-            if (userData.role === 'admin') {
-              navigate('/admin');
-            } else if (userData.role === 'producer') {
-              navigate('/dashboard');
-            }
+          // Check if admin
+          if (user.email === ACCESS_CONFIG.ADMIN_EMAIL) {
+            setUserRole('admin');
+            setProducerId(null);
+            navigate('/admin');
           } else {
-            setUserRole(null);
+            // Look for producer with matching email
+            const usersRef = ref(database, ACCESS_CONFIG.PATHS.USERS);
+            const snapshot = await get(usersRef);
+            
+            if (snapshot.exists()) {
+              const users = snapshot.val();
+              const producer = Object.entries(users).find(
+                ([_, data]: [string, any]) => data.email === user.email && data.role === 'producer'
+              );
+
+              if (producer) {
+                const [id, data] = producer;
+                setUserRole('producer');
+                setProducerId(id);
+                navigate('/dashboard');
+              } else {
+                throw new Error('Usuario no autorizado');
+              }
+            } else {
+              throw new Error('Error al cargar datos de usuario');
+            }
           }
-        } catch (error) {
-          console.error('Error fetching user role:', error);
+          setError(null);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Error de autenticación';
+          console.error('Error setting up user:', message);
+          setError(message);
           setUserRole(null);
+          setProducerId(null);
+          await signOut(auth);
+          navigate('/login');
         }
       } else {
         setUserRole(null);
+        setProducerId(null);
+        setError(null);
         if (window.location.pathname !== '/login') {
           navigate('/login');
         }
@@ -57,32 +80,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, [navigate]);
 
   const logout = async () => {
     try {
       await signOut(auth);
       setUserRole(null);
+      setProducerId(null);
+      setError(null);
       navigate('/login');
-    } catch (error) {
-      console.error('Error during logout:', error);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al cerrar sesión';
+      console.error('Error during logout:', message);
+      setError(message);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 bg-indigo-200 rounded-full mb-4"></div>
-          <div className="h-4 w-32 bg-indigo-100 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      userRole, 
+      producerId,
+      error, 
+      logout 
+    }}>
+      {error && (
+        <div className="fixed top-0 left-0 right-0 bg-red-100 border-b border-red-200 px-4 py-3">
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,1 @@
+// This file is intentionally empty - all Firebase initialization is now in index.ts

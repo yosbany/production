@@ -5,6 +5,7 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement | HT
   error?: string;
   type?: string;
   options?: { value: string; label: string }[];
+  helperText?: string;
 }
 
 export function FormInput({ 
@@ -13,8 +14,9 @@ export function FormInput({
   type = 'text',
   options,
   className = '',
-  value = '', // Provide default value to prevent uncontrolled/controlled switch
+  value = '',
   onChange,
+  helperText,
   ...props 
 }: FormInputProps) {
   const inputClasses = `
@@ -65,8 +67,11 @@ export function FormInput({
           {...props} 
         />
       )}
+      {helperText && !error && (
+        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+      )}
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="mt-1 text-sm text-red-600">{error}</p>
       )}
     </div>
   );

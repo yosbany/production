@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, DollarSign } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Product } from '../../types/product';
 import { Producer } from '../../types/producer';
 import { FormInput } from '../ui/FormInput';
-import { formatCurrency, formatPercentage } from '../../utils/format';
-import { CostManagementModal } from '../costs/CostManagementModal';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -15,14 +13,6 @@ interface ProductModalProps {
   producers: Producer[];
 }
 
-const defaultFormData: Omit<Product, 'id'> = {
-  name: '',
-  fixedCost: 0,
-  salePrice: 0,
-  producerId: '',
-  procedure: ''
-};
-
 export function ProductModal({ 
   isOpen, 
   onClose, 
@@ -31,31 +21,33 @@ export function ProductModal({
   loading,
   producers
 }: ProductModalProps) {
-  const [formData, setFormData] = useState<Omit<Product, 'id'>>(defaultFormData);
-  const [showCostModal, setShowCostModal] = useState(false);
+  const [formData, setFormData] = useState<Omit<Product, 'id'>>({
+    name: '',
+    salePrice: 0,
+    producerId: '',
+    procedure: '',
+    desiredQuantity: 0
+  });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name,
-        fixedCost: initialData.fixedCost,
         salePrice: initialData.salePrice,
         producerId: initialData.producerId,
-        procedure: initialData.procedure || ''
+        procedure: initialData.procedure || '',
+        desiredQuantity: initialData.desiredQuantity || 0
       });
     } else {
-      setFormData(defaultFormData);
+      setFormData({
+        name: '',
+        salePrice: 0,
+        producerId: '',
+        procedure: '',
+        desiredQuantity: 0
+      });
     }
   }, [initialData, isOpen]);
-
-  const calculateGrossMargin = (): number => {
-    if (formData.salePrice === 0) return 0;
-    return ((formData.salePrice - formData.fixedCost) / formData.salePrice) * 100;
-  };
-
-  const handleCostsUpdated = (totalCost: number) => {
-    setFormData(prev => ({ ...prev, fixedCost: totalCost }));
-  };
 
   if (!isOpen) return null;
 
@@ -81,6 +73,25 @@ export function ProductModal({
               required
             />
 
+            <FormInput
+              label="Cantidad Deseada"
+              type="number"
+              value={formData.desiredQuantity}
+              onChange={(e) => setFormData(prev => ({ ...prev, desiredQuantity: Number(e.target.value) }))}
+              required
+              min="0"
+            />
+
+            <FormInput
+              label="Precio de Venta"
+              type="number"
+              value={formData.salePrice}
+              onChange={(e) => setFormData(prev => ({ ...prev, salePrice: Number(e.target.value) }))}
+              min="0"
+              step="0.01"
+              required
+            />
+
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Procedimiento de Elaboración
@@ -89,65 +100,9 @@ export function ProductModal({
                 value={formData.procedure}
                 onChange={(e) => setFormData(prev => ({ ...prev, procedure: e.target.value }))}
                 rows={4}
-                className="
-                  w-full px-3 py-2 
-                  border-2 border-gray-300 
-                  rounded-md shadow-sm 
-                  bg-white
-                  text-gray-900
-                  placeholder-gray-400
-                  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                  hover:border-gray-400
-                  transition-colors
-                "
-                placeholder="Describa el procedimiento de elaboración del producto..."
+                className="w-full px-3 py-2 border-2 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Describa el procedimiento de elaboración..."
               />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Costos
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowCostModal(true)}
-                className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5 text-gray-500" />
-                  <span className="text-gray-900 font-medium">
-                    {formatCurrency(formData.fixedCost)}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-500">
-                  Gestionar costos
-                </span>
-              </button>
-            </div>
-
-            <FormInput
-              label="Precio de Venta"
-              type="number"
-              value={formData.salePrice}
-              onChange={(e) => setFormData(prev => ({ 
-                ...prev, 
-                salePrice: Number(e.target.value) 
-              }))}
-              min="0"
-              step="0.01"
-              required
-            />
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">Margen Bruto</span>
-                </div>
-                <span className={`text-sm font-bold ${calculateGrossMargin() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPercentage(calculateGrossMargin())}
-                </span>
-              </div>
             </div>
 
             <FormInput
@@ -182,17 +137,6 @@ export function ProductModal({
               </button>
             </div>
           </form>
-
-          {showCostModal && (
-            <CostManagementModal
-              isOpen={true}
-              onClose={() => setShowCostModal(false)}
-              productId={initialData?.id || ''}
-              productName={formData.name}
-              salePrice={formData.salePrice}
-              onCostsUpdated={handleCostsUpdated}
-            />
-          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import React from 'react';
-import { X, Package, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import ReactDOMServer from 'react-dom/server';
+import { X, Package, CheckCircle, XCircle, Printer } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
+import { ThermalPrintLayout } from '../ThermalPrintLayout';
 
 interface ProductDetails {
   id: string;
@@ -16,21 +18,76 @@ interface ProductionDetailsModalProps {
   onClose: () => void;
   producerName: string;
   products: ProductDetails[];
+  salaryCost: number;
+  laborCostPercentage: number;
+  wastePercentage: number;
 }
 
 export function ProductionDetailsModal({
   isOpen,
   onClose,
   producerName,
-  products
+  products,
+  salaryCost,
+  laborCostPercentage,
+  wastePercentage
 }: ProductionDetailsModalProps) {
   if (!isOpen) return null;
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Prepare print data
+    const printData = {
+      producerName,
+      date: new Date().toISOString(),
+      products: products.map(p => ({
+        name: p.name,
+        quantity: p.quantity
+      }))
+    };
+
+    // Write print layout to new window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Producción - ${producerName}</title>
+        </head>
+        <body>
+          <div id="print-root"></div>
+          <script>
+            // Render immediately and print
+            window.onload = () => {
+              window.print();
+              // Close after printing (optional)
+              window.onafterprint = () => window.close();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+
+    // Render the print layout
+    const root = printWindow.document.getElementById('print-root');
+    if (root) {
+      root.innerHTML = ReactDOMServer.renderToString(
+        <ThermalPrintLayout {...printData} />
+      );
+    }
+  };
 
   const totalQuantity = products.reduce((sum, p) => sum + p.quantity, 0);
   const completedQuantity = products.reduce((sum, p) => sum + (p.completed ? p.quantity : 0), 0);
   const completionPercentage = totalQuantity > 0 
     ? Math.round((completedQuantity / totalQuantity) * 100) 
     : 0;
+
+  const totalSales = products.reduce((sum, p) => {
+    const effectiveProductQuantity = Math.floor(p.quantity * (1 - wastePercentage / 100));
+    return sum + (effectiveProductQuantity * p.salePrice);
+  }, 0);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -71,6 +128,41 @@ export function ProductionDetailsModal({
             </div>
           </div>
 
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-700 mb-2">Ventas Netas</h4>
+              <p className="text-2xl font-bold text-blue-900">{formatCurrency(totalSales)}</p>
+            </div>
+
+            <div className="bg-amber-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-amber-700 mb-2">Merma</h4>
+              <p className="text-2xl font-bold text-amber-900">{wastePercentage}%</p>
+            </div>
+
+            <div className={`rounded-lg p-4 ${
+              laborCostPercentage <= 20 ? 'bg-green-50' :
+              laborCostPercentage <= 35 ? 'bg-yellow-50' :
+              'bg-red-50'
+            }`}>
+              <h4 className={`text-sm font-medium mb-2 ${
+                laborCostPercentage <= 20 ? 'text-green-700' :
+                laborCostPercentage <= 35 ? 'text-yellow-700' :
+                'text-red-700'
+              }`}>Costo Laboral</h4>
+              <p className={`text-2xl font-bold ${
+                laborCostPercentage <= 20 ? 'text-green-900' :
+                laborCostPercentage <= 35 ? 'text-yellow-900' :
+                'text-red-900'
+              }`}>{laborCostPercentage}%</p>
+              <p className={`text-sm ${
+                laborCostPercentage <= 20 ? 'text-green-600' :
+                laborCostPercentage <= 35 ? 'text-yellow-600' :
+                'text-red-600'
+              }`}>sobre ventas netas</p>
+            </div>
+          </div>
+
           {/* Products List */}
           <div className="p-4">
             <table className="min-w-full divide-y divide-gray-200">
@@ -83,13 +175,10 @@ export function ProductionDetailsModal({
                     Cantidad
                   </th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Costo Total
+                    Precio Unitario
                   </th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Venta Total
-                  </th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ingresos Netos
+                    Subtotal
                   </th>
                   <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
@@ -98,9 +187,7 @@ export function ProductionDetailsModal({
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {products.map((product) => {
-                  const totalCost = product.cost;
-                  const totalSales = product.salePrice * product.quantity;
-                  const netIncome = totalSales - totalCost;
+                  const subtotal = product.quantity * product.salePrice;
                   
                   return (
                     <tr key={product.id} className="hover:bg-gray-50">
@@ -116,15 +203,10 @@ export function ProductionDetailsModal({
                         {product.quantity}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-gray-900">
-                        {formatCurrency(totalCost)}
+                        {formatCurrency(product.salePrice)}
                       </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-right text-sm text-gray-900">
-                        {formatCurrency(totalSales)}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap text-right text-sm">
-                        <span className={netIncome >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatCurrency(netIncome)}
-                        </span>
+                      <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                        {formatCurrency(subtotal)}
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap text-center">
                         {product.completed ? (
@@ -139,34 +221,27 @@ export function ProductionDetailsModal({
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan={2} className="px-3 py-3 text-sm font-medium text-gray-900">
-                    Totales
+                  <td colSpan={3} className="px-3 py-3 text-sm font-medium text-right text-gray-900">
+                    Total Bruto:
                   </td>
                   <td className="px-3 py-3 text-right text-sm font-medium text-gray-900">
-                    {formatCurrency(products.reduce((sum, p) => sum + p.cost, 0))}
+                    {formatCurrency(products.reduce((sum, p) => sum + (p.quantity * p.salePrice), 0))}
                   </td>
-                  <td className="px-3 py-3 text-right text-sm font-medium text-gray-900">
-                    {formatCurrency(products.reduce((sum, p) => sum + (p.salePrice * p.quantity), 0))}
-                  </td>
-                  <td className="px-3 py-3 text-right text-sm font-medium">
-                    {(() => {
-                      const totalNet = products.reduce((sum, p) => 
-                        sum + ((p.salePrice * p.quantity) - p.cost), 0);
-                      return (
-                        <span className={totalNet >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {formatCurrency(totalNet)}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-3 py-3" />
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end px-4 py-3 bg-gray-50 rounded-b-lg">
+          <div className="flex justify-between px-4 py-3 bg-gray-50 rounded-b-lg">
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-md"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir
+            </button>
             <button
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"

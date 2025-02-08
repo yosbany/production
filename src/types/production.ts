@@ -9,12 +9,13 @@ export interface ProductionListItem {
   date: string;
   producerId: string;
   producerName: string;
-  totalCost: number;
   totalSales: number;
   salaryCost: number;
-  netIncome: number;
+  wastePercentage: number;
+  wasteQuantity: number;
+  effectiveQuantity: number;
   status: 'completed' | 'in-progress';
   completionPercentage: number;
-  performance: number;
+  laborCostPercentage: number;
   productions: Record<string, Production>;
 }

@@ -1,55 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { Cost, CostFormData } from '../../types/costs';
+import { User, UserInput } from '../../types/user';
 import { FormInput } from '../ui/FormInput';
 
-interface CostModalProps {
+interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CostFormData) => Promise<void>;
-  initialData?: Cost | null;
+  onSubmit: (user: UserInput) => Promise<void>;
+  initialData?: User | null;
 }
 
-export function CostModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  initialData
-}: CostModalProps) {
-  const [formData, setFormData] = useState<CostFormData>({
+export function UserModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  initialData 
+}: UserModalProps) {
+  const [formData, setFormData] = useState<UserInput>({
+    email: '',
     name: '',
-    unit: '',
-    pricePerUnit: 0
+    salaryCost: 0
   });
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
+        email: initialData.email,
         name: initialData.name,
-        unit: initialData.unit,
-        pricePerUnit: initialData.pricePerUnit
+        salaryCost: initialData.salaryCost || 0
       });
     } else {
       setFormData({
+        email: '',
         name: '',
-        unit: '',
-        pricePerUnit: 0
+        salaryCost: 0
       });
     }
+    setError(null);
   }, [initialData, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
-
+    setError(null);
     try {
       await onSubmit(formData);
       onClose();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Error al guardar el costo');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar el usuario');
     } finally {
       setLoading(false);
     }
@@ -58,13 +58,13 @@ export function CostModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-40 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black opacity-30" onClick={onClose} />
         <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full">
           <div className="flex items-center justify-between p-4 border-b">
-            <h3 className="text-lg font-medium text-gray-900">
-              {initialData ? 'Editar Costo' : 'Nuevo Costo'}
+            <h3 className="text-lg font-medium">
+              {initialData ? 'Editar Productor' : 'Nuevo Productor'}
             </h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
               <X className="h-5 w-5" />
@@ -79,34 +79,38 @@ export function CostModal({
             )}
 
             <FormInput
-              label="Nombre del Costo"
+              label="Nombre"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
             />
 
             <FormInput
-              label="Unidad de Medida"
-              value={formData.unit}
-              onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               required
             />
 
             <FormInput
-              label="Precio por Unidad"
+              label="Salario por Día"
               type="number"
-              value={formData.pricePerUnit}
-              onChange={(e) => setFormData(prev => ({ ...prev, pricePerUnit: Number(e.target.value) }))}
-              min="0.01"
-              step="0.01"
+              value={formData.salaryCost}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                salaryCost: Number(e.target.value)
+              }))}
               required
+              min="0"
+              helperText="Ingrese el salario diario del productor"
             />
 
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className="flex justify-end space-x-3 pt-4 border-t">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-300 rounded-md"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 border-2 border-gray-300 rounded-md"
               >
                 Cancelar
               </button>
@@ -115,7 +119,7 @@ export function CostModal({
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50"
               >
-                {loading ? 'Guardando...' : 'Guardar'}
+                {loading ? 'Guardando...' : initialData ? 'Actualizar' : 'Crear'}
               </button>
             </div>
           </form>

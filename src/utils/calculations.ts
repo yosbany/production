@@ -1,6 +1,8 @@
 import { ProductionListItem } from '../types/production';
 import { getProducerById } from '../lib/firebase/producers';
 
+const WASTE_PERCENTAGE = 10; // 10% de merma
+
 export async function calculateProductionCosts(productions: any, products: any): Promise<ProductionListItem[]> {
   try {
     const productionsList: ProductionListItem[] = [];
@@ -9,18 +11,18 @@ export async function calculateProductionCosts(productions: any, products: any):
     for (const [dateKey, dateProductions] of Object.entries(productions)) {
       // Process each producer's productions for this date
       for (const [producerId, userProductions] of Object.entries(dateProductions as object)) {
-        let totalCost = 0;
+        let totalQuantity = 0;
         let totalSales = 0;
         let completedItems = 0;
         let totalItems = 0;
 
-        // Calculate production costs and potential sales
+        // Calculate potential sales
         Object.entries(userProductions as object).forEach(([productId, production]: [string, any]) => {
           const product = products[productId];
           if (product && production.quantity) {
-            const productCost = product.fixedCost * production.quantity;
-            const productSales = product.salePrice * production.quantity;
-            totalCost += productCost;
+            totalQuantity += production.quantity;
+            const effectiveQuantity = Math.floor(production.quantity * (1 - WASTE_PERCENTAGE / 100));
+            const productSales = product.salePrice * effectiveQuantity;
             totalSales += productSales;
             totalItems++;
             if (production.completed) {
@@ -36,21 +38,27 @@ export async function calculateProductionCosts(productions: any, products: any):
           ? Math.round((completedItems / totalItems) * 100) 
           : 0;
 
-        const netIncome = totalSales - totalCost;
-        const performance = calculatePerformance(netIncome, salaryCost);
+        // Calcular el porcentaje de costo laboral sobre las ventas netas
+        const laborCostPercentage = totalSales > 0 
+          ? Math.round((salaryCost / totalSales) * 100) 
+          : 0;
+
+        const wasteQuantity = Math.floor(totalQuantity * (WASTE_PERCENTAGE / 100));
+        const effectiveQuantity = totalQuantity - wasteQuantity;
 
         productionsList.push({
           id: producerId,
           date: dateKey,
           producerId,
           producerName: producer?.name || 'Productor Desconocido',
-          totalCost,
-          totalSales,
+          totalSales, // Este valor ya considera la merma
           salaryCost,
-          netIncome,
+          wastePercentage: WASTE_PERCENTAGE,
+          wasteQuantity,
+          effectiveQuantity,
           status: completionPercentage === 100 ? 'completed' : 'in-progress',
           completionPercentage,
-          performance,
+          laborCostPercentage,
           productions: userProductions as Record<string, { quantity: number; completed: boolean }>
         });
       }
@@ -61,9 +69,4 @@ export async function calculateProductionCosts(productions: any, products: any):
     console.error('Error calculating production costs:', error);
     return [];
   }
-}
-
-function calculatePerformance(netIncome: number, salaryCost: number): number {
-  if (salaryCost === 0) return 0;
-  return Math.round(((netIncome - salaryCost) / salaryCost) * 100);
 }

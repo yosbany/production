@@ -3,24 +3,25 @@ import { ref, onValue } from 'firebase/database';
 import { database } from '../lib/firebase';
 import { Product } from '../types/product';
 import { useAuth } from '../contexts/AuthContext';
+import { ACCESS_CONFIG } from '../constants/firebase';
 
 export function useProducerProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { producerId } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    if (!producerId) return;
 
-    const productsRef = ref(database, 'products');
+    const productsRef = ref(database, ACCESS_CONFIG.PATHS.PRODUCTS);
     
     const unsubscribe = onValue(productsRef, (snapshot) => {
       if (snapshot.exists()) {
         const allProducts = snapshot.val();
         
-        // Filter products where producerId matches the current user's ID
+        // Filter products assigned to this producer
         const producerProducts = Object.entries(allProducts)
-          .filter(([_, data]: [string, any]) => data.producerId === user.uid)
+          .filter(([_, data]: [string, any]) => data.producerId === producerId)
           .map(([id, data]: [string, any]) => ({
             id,
             ...data
@@ -34,7 +35,7 @@ export function useProducerProducts() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [producerId]);
 
   return { products, loading };
 }

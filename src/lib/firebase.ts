@@ -3,18 +3,15 @@ import { getAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 import { firebaseConfig } from './firebase/config';
 
-let auth;
-let database;
+// Initialize main production app
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const database = getDatabase(app);
 
-try {
-  const app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  database = getDatabase(app);
-} catch (error) {
-  console.error('Error initializing Firebase:', error);
-  throw new Error(
-    'Failed to initialize Firebase. Please check your configuration.'
-  );
+// Function to validate database access
+export function validateDatabaseAccess(user: { uid: string } | null) {
+  if (!user) {
+    throw new Error('Database access requires authentication');
+  }
+  return true;
 }
-
-export { auth, database };

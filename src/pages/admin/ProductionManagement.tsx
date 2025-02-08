@@ -36,8 +36,20 @@ export default function ProductionManagement() {
         throw new Error('Ya existe una producción para este productor en la fecha seleccionada');
       }
 
+      // Filter out products with quantity 0
+      const validProductions = Object.entries(data.productions)
+        .filter(([_, prod]) => prod.quantity > 0)
+        .reduce((acc, [id, prod]) => ({
+          ...acc,
+          [id]: prod
+        }), {});
+
+      if (Object.keys(validProductions).length === 0) {
+        throw new Error('Debe especificar al menos una cantidad mayor a cero');
+      }
+
       const productionRef = ref(database, `productions/${dateString}/${data.producerId}`);
-      await set(productionRef, data.productions);
+      await set(productionRef, validProductions);
       setIsModalOpen(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Error al crear la producción');
@@ -90,7 +102,10 @@ export default function ProductionManagement() {
 
       <NewProductionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setError(null);
+        }}
         onSubmit={handleCreateProduction}
         producers={producers}
         products={products}

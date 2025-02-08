@@ -4,21 +4,21 @@ import { ref, get } from 'firebase/database';
 import { database } from '../../lib/firebase';
 
 export async function checkDuplicateProduction(date: string, producerId: string): Promise<boolean> {
-  const productionRef = ref(database, `productions/${date}/${producerId}`);
-  const snapshot = await get(productionRef);
-  return snapshot.exists();
+  try {
+    const productionRef = ref(database, `productions/${date}/${producerId}`);
+    const snapshot = await get(productionRef);
+    return snapshot.exists();
+  } catch (error) {
+    console.error('Error checking for duplicate production:', error);
+    return false;
+  }
 }
 
 export function validateProductionData(
-  production: ProductionListItem,
+  production: ProductionListItem | null,
   products: ProductDetails[],
   newProductions: Record<string, { quantity: number; completed: boolean }>
 ): string | null {
-  // Check if production exists
-  if (!production) {
-    return 'Producción no encontrada';
-  }
-
   // Check if products exist
   if (!products.length) {
     return 'No hay productos disponibles';
