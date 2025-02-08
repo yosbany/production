@@ -5,6 +5,7 @@ import { ProductDetails } from '../../types/productDetails';
 import { ProductCard } from '../ProductCard';
 import { formatDate } from '../../utils/format';
 import { updateProductionData } from '../../utils/production/calculations';
+import { useProducts } from '../../hooks/useProducts';
 
 interface EditProductionModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export function EditProductionModal({
   isOpen,
   onClose,
   production,
-  products,
+  products: initialProducts,
   onSave
 }: EditProductionModalProps) {
   const [loading, setLoading] = useState(false);
@@ -26,22 +27,30 @@ export function EditProductionModal({
   const [productions, setProductions] = useState<Record<string, { quantity: number; completed: boolean }>>(
     {}
   );
+  const { products: allProducts } = useProducts();
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
-  // Inicializar/actualizar producciones cuando el modal se abre o cambian los productos
+  // Get all available products for this producer
+  const availableProducts = allProducts.filter(p => p.producerId === production.producerId);
+  
+  // Determine which products to display
+  const displayProducts = showAllProducts ? availableProducts : initialProducts;
+
+  // Initialize/update productions when the modal opens or products change
   useEffect(() => {
-    if (isOpen) {
-      const initialProductions = { ...production.productions };
-      
-      // Asegurarse de que todos los productos tengan una entrada
-      products.forEach(product => {
-        if (!initialProductions[product.id]) {
-          initialProductions[product.id] = { quantity: 0, completed: false };
-        }
-      });
+    if (!isOpen) return;
 
-      setProductions(initialProductions);
-    }
-  }, [isOpen, products, production.productions]);
+    const initialProductions = { ...production.productions };
+    
+    // Ensure all products have an entry
+    displayProducts.forEach(product => {
+      if (!initialProductions[product.id]) {
+        initialProductions[product.id] = { quantity: 0, completed: false };
+      }
+    });
+
+    setProductions(initialProductions);
+  }, [isOpen, production.productions, displayProducts.length]); // Only depend on the length to avoid infinite updates
 
   const handleProductionChange = (productId: string, quantity: number, completed: boolean) => {
     setProductions(prev => ({
@@ -57,7 +66,7 @@ export function EditProductionModal({
     setError(null);
 
     try {
-      // Filtrar productos con cantidad 0
+      // Filter products with quantity 0
       const validProductions = Object.entries(productions)
         .filter(([_, prod]) => prod.quantity > 0)
         .reduce((acc, [id, prod]) => ({
@@ -69,7 +78,7 @@ export function EditProductionModal({
         throw new Error('Debe especificar al menos una cantidad mayor a cero');
       }
 
-      const updatedProduction = updateProductionData(production, products, validProductions);
+      const updatedProduction = updateProductionData(production, displayProducts, validProductions);
       await onSave(updatedProduction);
       onClose();
     } catch (error) {
@@ -108,8 +117,18 @@ export function EditProductionModal({
               </div>
             )}
 
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAllProducts(!showAllProducts)}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                {showAllProducts ? 'Mostrar productos actuales' : 'Mostrar todos los productos'}
+              </button>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map(product => (
+              {displayProducts.map(product => (
                 <ProductCard
                   key={product.id}
                   product={product}

@@ -10,13 +10,15 @@ interface ProductionListProps {
   loading: boolean;
   error?: string | null;
   onEdit: (production: ProductionListItem) => Promise<void>;
+  onDelete: (production: ProductionListItem) => Promise<void>;
 }
 
 export function ProductionList({ 
   productions, 
   loading, 
   error,
-  onEdit 
+  onEdit,
+  onDelete
 }: ProductionListProps) {
   if (loading) {
     return <LoadingState message="Cargando producciones..." />;
@@ -57,6 +59,7 @@ export function ProductionList({
               key={getProductionKey(production)}
               production={production} 
               onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
           {inProgressProductions.length === 0 && (
@@ -81,6 +84,7 @@ export function ProductionList({
               key={getProductionKey(production)}
               production={production}
               onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))}
           {completedProductions.length === 0 && (

@@ -1,20 +1,39 @@
 import React, { useState } from 'react';
 import { ProductionListItem } from '../../types/production';
 import { formatDate, formatCurrency } from '../../utils/format';
-import { ChevronRight, ShoppingCart, PiggyBank, Edit, AlertTriangle, TrendingUp } from 'lucide-react';
+import { ChevronRight, ShoppingCart, PiggyBank, Edit, AlertTriangle, TrendingUp, Trash2, Printer } from 'lucide-react';
 import { ProductionDetailsModal } from '../modals/ProductionDetailsModal';
 import { EditProductionModal } from '../modals/EditProductionModal';
+import { DeleteConfirmationModal } from '../modals/DeleteConfirmationModal';
 import { useProductionDetails } from '../../hooks/useProductionDetails';
+import { handlePrintProduction } from '../../utils/print';
 
 interface ProductionCardProps {
   production: ProductionListItem;
   onEdit: (production: ProductionListItem) => Promise<void>;
+  onDelete: (production: ProductionListItem) => Promise<void>;
 }
 
-export function ProductionCard({ production, onEdit }: ProductionCardProps) {
+export function ProductionCard({ production, onEdit, onDelete }: ProductionCardProps) {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { products, loading } = useProductionDetails(production.date, production.producerId);
+
+  const handlePrint = () => {
+    const printData = {
+      producerName: production.producerName,
+      date: production.date,
+      products: Object.entries(production.productions)
+        .filter(([_, data]) => data.quantity > 0)
+        .map(([productId, data]) => ({
+          name: products.find(p => p.id === productId)?.name || '',
+          quantity: data.quantity
+        }))
+    };
+
+    handlePrintProduction(printData);
+  };
 
   const getLaborCostColor = (percentage: number) => {
     if (percentage <= 20) return 'text-green-500';
@@ -80,7 +99,21 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                onClick={handleEditClick}
+                onClick={handlePrint}
+                className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                title="Imprimir producción"
+              >
+                <Printer className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                title="Eliminar producción"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
                 className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
                 title="Editar producción"
               >
@@ -208,6 +241,13 @@ export function ProductionCard({ production, onEdit }: ProductionCardProps) {
         production={production}
         products={products}
         onSave={onEdit}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => onDelete(production)}
+        itemName={`producción de ${production.producerName} del ${formatDate(production.date)}`}
       />
     </>
   );

@@ -5,7 +5,7 @@ import { useProducers } from '../../hooks/useProducers';
 import { useProducts } from '../../hooks/useProducts';
 import { NewProductionModal } from '../../components/modals/NewProductionModal';
 import { NewProductionButton } from '../../components/admin/NewProductionButton';
-import { ref, set } from 'firebase/database';
+import { ref, set, remove } from 'firebase/database';
 import { database } from '../../lib/firebase';
 import { ProductionListItem } from '../../types/production';
 import { checkDuplicateProduction } from '../../utils/production/validation';
@@ -77,6 +77,24 @@ export default function ProductionManagement() {
     }
   };
 
+  const handleDeleteProduction = async (production: ProductionListItem) => {
+    setSaving(true);
+    setError(null);
+    
+    try {
+      const productionRef = ref(
+        database, 
+        `productions/${production.date}/${production.producerId}`
+      );
+      await remove(productionRef);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error al eliminar la producción');
+      console.error('Error deleting production:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const loading = productionsLoading || producersLoading || productsLoading;
 
   return (
@@ -98,6 +116,7 @@ export default function ProductionManagement() {
         productions={productions}
         loading={loading}
         onEdit={handleEditProduction}
+        onDelete={handleDeleteProduction}
       />
 
       <NewProductionModal
