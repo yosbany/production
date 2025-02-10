@@ -4,6 +4,7 @@ import { database } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Production } from '../types/production';
 import { saveProductionData } from '../utils/production/database';
+import { getDateString } from '../utils/dateUtils';
 
 export function useProduction(date: Date) {
   const [productions, setProductions] = useState<Record<string, Production>>({});
@@ -13,21 +14,19 @@ export function useProduction(date: Date) {
   useEffect(() => {
     if (!producerId) return;
 
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = getDateString(date);
     const productionRef = ref(database, `productions/${dateString}/${producerId}`);
     
     const unsubscribe = onValue(productionRef, (snapshot) => {
       if (snapshot.exists()) {
-        // Convertir los datos a nuestro formato de producción
         const productionData = snapshot.val();
         const formattedProductions: Record<string, Production> = {};
         
-        // Procesar cada producto en la producción
         Object.entries(productionData).forEach(([productId, data]: [string, any]) => {
           formattedProductions[productId] = {
-            quantity: data.quantity || 0,
-            completed: data.completed || false,
-            selected: data.selected || false
+            quantity: Number(data.quantity) || 0,
+            completed: Boolean(data.completed),
+            selected: Boolean(data.selected)
           };
         });
         
@@ -46,7 +45,20 @@ export function useProduction(date: Date) {
     
     setLoading(true);
     try {
-      await saveProductionData(date, producerId, newProductions);
+      // Normalizar los datos antes de guardar
+      const normalizedProductions = Object.entries(newProductions).reduce((acc, [id, prod]) => {
+        // Solo incluir productos con cantidad o seleccionados
+        if (prod.quantity > 0 || prod.selected) {
+          acc[id] = {
+            quantity: Number(prod.quantity) || 0,
+            completed: Boolean(prod.completed),
+            selected: Boolean(prod.selected)
+          };
+        }
+        return acc;
+      }, {} as Record<string, Production>);
+
+      await saveProductionData(date, producerId, normalizedProductions);
     } catch (error) {
       console.error('Error saving production:', error);
       throw error;

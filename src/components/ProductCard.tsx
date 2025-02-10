@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import { Package, CheckCircle, Star } from 'lucide-react';
 import { QuantityInput } from './ui/QuantityInput';
+import { calculateOptimalQuantity } from '../utils/production/optimalQuantity';
 
 interface ProductCardProps {
   product: Product;
@@ -9,12 +10,11 @@ interface ProductCardProps {
   initialCompleted?: boolean;
   onChange: (quantity: number, completed: boolean) => void;
   disabled?: boolean;
-  productionHistory?: {
-    averageQuantity: number;
-    lastQuantity: number | null;
-  };
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  producerId?: string;
+  targetDate?: Date;
+  isRainyDay?: boolean;
 }
 
 export function ProductCard({ 
@@ -23,22 +23,20 @@ export function ProductCard({
   initialCompleted = false,
   onChange,
   disabled = false,
-  productionHistory,
   isSelected = false,
-  onToggleSelect
+  onToggleSelect,
+  producerId,
+  targetDate = new Date(),
+  isRainyDay = false
 }: ProductCardProps) {
   const [quantity, setQuantity] = useState(initialQuantity);
   const [completed, setCompleted] = useState(initialCompleted);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     setQuantity(initialQuantity);
-    if (initialQuantity === 0 && completed) {
-      setCompleted(false);
-      onChange(0, false);
-    } else {
-      setCompleted(initialCompleted);
-    }
-  }, [initialQuantity, initialCompleted, onChange]);
+    setCompleted(initialCompleted);
+  }, [initialQuantity, initialCompleted]);
 
   const handleQuantityChange = (value: number) => {
     setQuantity(value);
@@ -60,7 +58,36 @@ export function ProductCard({
     onChange(quantity, newCompleted);
   };
 
-  const isCompletionDisabled = disabled || quantity === 0;
+  const calculateSuggested = useCallback(async () => {
+    if (!producerId || isCalculating) return;
+    
+    setIsCalculating(true);
+    try {
+      const optimal = await calculateOptimalQuantity(
+        product.id,
+        producerId,
+        targetDate,
+        isRainyDay
+      );
+
+      if (optimal > 0) {
+        setQuantity(optimal);
+        onChange(optimal, completed);
+      }
+    } catch (error) {
+      console.error('Error calculating optimal quantity:', error);
+    } finally {
+      setIsCalculating(false);
+    }
+  }, [product.id, producerId, targetDate, isRainyDay, completed, onChange]);
+
+  const handleToggleSelect = () => {
+    if (!onToggleSelect || isCalculating) return;
+    onToggleSelect();
+    if (!isSelected && producerId) {
+      calculateSuggested();
+    }
+  };
 
   return (
     <div className={`
@@ -75,27 +102,25 @@ export function ProductCard({
             <Package className={`h-5 w-5 ${completed ? 'text-green-500' : 'text-gray-400'}`} />
             <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
           </div>
-          {onToggleSelect && (
-            <button
-              onClick={onToggleSelect}
-              className={`p-2 rounded-full transition-colors ${
-                isSelected 
-                  ? 'text-indigo-600 hover:bg-indigo-50' 
-                  : 'text-gray-400 hover:bg-gray-50'
-              }`}
-              title={isSelected ? 'Deseleccionar producto' : 'Seleccionar para elaborar'}
-            >
-              <Star className={`h-5 w-5 ${isSelected ? 'fill-current' : ''}`} />
-            </button>
-          )}
+          <button
+            onClick={handleToggleSelect}
+            disabled={isCalculating}
+            className={`p-2 rounded-full transition-colors ${
+              isSelected 
+                ? 'text-indigo-600 hover:bg-indigo-50' 
+                : 'text-gray-400 hover:bg-gray-50'
+            }`}
+            title={isSelected ? 'Deseleccionar producto' : 'Seleccionar para elaborar'}
+          >
+            <Star className={`h-5 w-5 ${isSelected ? 'fill-current' : ''}`} />
+          </button>
         </div>
 
         <QuantityInput
           value={quantity}
           onChange={handleQuantityChange}
           onSave={handleQuantitySave}
-          disabled={disabled}
-          productionStats={productionHistory}
+          disabled={disabled || isCalculating}
           className={`
             ${completed 
               ? 'border-green-200 bg-green-50 focus:ring-green-500 focus:border-green-500' 
@@ -106,7 +131,7 @@ export function ProductCard({
 
         <button
           onClick={handleCompletedChange}
-          disabled={isCompletionDisabled}
+          disabled={disabled || quantity === 0}
           className={`
             w-full mt-4 flex items-center justify-center space-x-2 
             px-4 py-3 rounded-lg

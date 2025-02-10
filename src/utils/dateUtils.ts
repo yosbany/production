@@ -1,4 +1,4 @@
-import { format, isValid } from 'date-fns';
+import { format, isValid, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function formatDisplayDate(date: Date): string {
@@ -23,6 +23,13 @@ export function formatTimestamp(date: Date): string {
 
 export function parseInputDate(dateString: string): Date {
   const date = new Date(dateString);
-  date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-  return date;
+  return startOfDay(date);
+}
+
+export function getDateString(date: Date): string {
+  // Convertir la fecha a UTC y obtener solo la parte de la fecha
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

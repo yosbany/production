@@ -19,7 +19,7 @@ export function useProductionHistory(productId: string, producerId: string): Pro
         const recentProductionsQuery = query(
           productionsRef,
           orderByKey(),
-          limitToLast(30)
+          limitToLast(30) // Últimos 30 días
         );
         
         const snapshot = await get(recentProductionsQuery);
@@ -30,25 +30,25 @@ export function useProductionHistory(productId: string, producerId: string): Pro
         let count = 0;
         let lastQuantity = null;
 
+        // Ordenar por fecha descendente para obtener la última producción primero
         Object.entries(productions)
           .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-          .some(([_, dateProductions]: [string, any]) => {
+          .forEach(([_, dateProductions]: [string, any]) => {
             const producerProduction = dateProductions[producerId];
-            if (!producerProduction?.[productId]) return false;
+            if (producerProduction?.[productId]) {
+              const production = producerProduction[productId];
+              
+              // Sumar a los totales si hay cantidad
+              if (production.quantity > 0) {
+                totalQuantity += production.quantity;
+                count++;
 
-            const production = producerProduction[productId];
-            
-            if (production.quantity > 0) {
-              totalQuantity += production.quantity;
-              count++;
+                // Guardar la última cantidad completada si aún no se ha encontrado
+                if (lastQuantity === null && production.completed) {
+                  lastQuantity = production.quantity;
+                }
+              }
             }
-
-            if (production.completed && lastQuantity === null) {
-              lastQuantity = production.quantity;
-              return true;
-            }
-
-            return false;
           });
 
         if (count > 0) {
@@ -56,9 +56,18 @@ export function useProductionHistory(productId: string, producerId: string): Pro
             averageQuantity: Math.round(totalQuantity / count),
             lastQuantity
           });
+        } else {
+          setHistory({
+            averageQuantity: 0,
+            lastQuantity: null
+          });
         }
       } catch (error) {
         console.error('Error fetching production history:', error);
+        setHistory({
+          averageQuantity: 0,
+          lastQuantity: null
+        });
       }
     }
 

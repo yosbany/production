@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { SaveIndicator } from './ui/SaveIndicator';
 import { EmptyState } from './ui/EmptyState';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ProductionListProps {
   products: Product[];
-  onSave: (productions: Record<string, { quantity: number; completed: boolean }>) => Promise<void>;
+  onSave: (productions: Record<string, { quantity: number; completed: boolean; selected: boolean }>) => Promise<void>;
   loading: boolean;
-  initialProductions: Record<string, { quantity: number; completed: boolean }>;
+  initialProductions: Record<string, { quantity: number; completed: boolean; selected: boolean }>;
   selectedProducts: Set<string>;
   onToggleProductSelection: (productId: string) => void;
   isProductSelected: (productId: string) => boolean;
   showSelected: boolean;
+  isRainyDay: boolean;
 }
 
 export function ProductionList({ 
@@ -23,13 +25,16 @@ export function ProductionList({
   selectedProducts,
   onToggleProductSelection,
   isProductSelected,
-  showSelected
+  showSelected,
+  isRainyDay
 }: ProductionListProps) {
+  const { producerId } = useAuth();
+  
   const displayProducts = showSelected 
     ? products.filter(p => selectedProducts.has(p.id))
     : products;
 
-  const handleProductionChange = async (
+  const handleProductionChange = useCallback(async (
     productId: string, 
     quantity: number, 
     completed: boolean
@@ -43,7 +48,7 @@ export function ProductionList({
       }
     };
     await onSave(updatedProductions);
-  };
+  }, [initialProductions, onSave, isProductSelected]);
 
   return (
     <>
@@ -58,6 +63,9 @@ export function ProductionList({
             disabled={loading}
             isSelected={isProductSelected(product.id)}
             onToggleSelect={() => onToggleProductSelection(product.id)}
+            producerId={producerId || undefined}
+            targetDate={new Date()}
+            isRainyDay={isRainyDay}
           />
         ))}
       </div>
